@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Schedule a Meeting</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa; /* Light gray for trust-inducing background */
+            color: #343a40; /* Dark gray for text */
+        }
+        .container {
+            max-width: 600px;
+            background-color: #ffffff; /* White for form background */
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Soft shadow for elevation */
+            margin-top: 50px;
+        }
+        h1 {
+            color: #8e66ca; /* Purple for headings */
+        }
+        .btn-primary {
+            background-color: #6f42c1; /* Purple for trust */
+            border-color: #6f42c1;
+        }
+        .btn-primary:hover {
+            background-color: #5a2e9f; /* Darker purple for hover */
+            border-color: #5a2e9f;
+        }
+        /* Fix text-editing cursor for datetime-local */
+        input[type="datetime-local"] {
+            cursor: text;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="text-center mb-4">Let's Connect</h1>
+        <form id="meetingForm">
+            <input type="hidden" name="_subject" value="New Meeting Request">
+
+            <!-- Hidden field for company -->
+            <input type="hidden" id="company" name="company">
+
+            <div class="mb-3">
+                <label for="name" class="form-label">Name</label>
+                <input type="text" class="form-control" id="name" name="name" placeholder="Enter your name" required>
+            </div>
+            <div class="mb-3">
+                <label for="email" class="form-label">Email</label>
+                <input type="email" class="form-control" id="email" name="email" placeholder="Enter your email" required>
+            </div>
+            <div class="mb-3">
+                <label for="preference" class="form-label">Meeting Preference</label>
+                <select class="form-select" id="preference" name="preference" onchange="updateFormFields()" required>
+                    <option value="" disabled selected>Select a preference</option>
+                    <option value="Zoom">Zoom</option>
+                    <option value="Phone Call">Phone Call</option>
+                    <option value="In Person">In Person</option>
+                </select>
+            </div>
+            <div class="mb-3" id="locationField" style="display: none;">
+                <label for="location" class="form-label">Meeting Location</label>
+                <input type="text" class="form-control" id="location" name="location" placeholder="Enter the meeting location">
+            </div>
+            <div class="mb-3" id="phoneField" style="display: none;">
+                <label for="phone" class="form-label">Phone Number</label>
+                <input type="tel" class="form-control" id="phone" name="phone" placeholder="Enter your phone number">
+            </div>
+            <div class="mb-3">
+                <label for="time" class="form-label">Desired Time</label>
+                <input type="datetime-local" 
+                       class="form-control" 
+                       id="time" 
+                       name="time" 
+                       required 
+                       onclick="triggerPicker(this)">
+            </div>
+            <div class="mb-3">
+                <label for="notes" class="form-label">Additional Notes</label>
+                <textarea class="form-control" id="notes" name="notes" placeholder="Enter any additional details..."></textarea>
+            </div>
+            <button type="submit" class="btn w-100" style="background-color: #6f42c1; color: #fff; border: none;">Schedule Meeting with Anton (Elope Music)</button>
+        </form>
+        <div id="responseMessage" style="display: none;" class="alert alert-success mt-3">
+            Your meeting request has been submitted successfully!
+        </div>
+    </div>
+
+    <script>
+        // Toggle visibility and requirements based on preference
+        function updateFormFields() {
+            const preference = document.getElementById('preference').value;
+            document.getElementById('locationField').style.display = preference === 'In Person' ? 'block' : 'none';
+            document.getElementById('phoneField').style.display = preference === 'Phone Call' ? 'block' : 'none';
+
+            document.getElementById('location').required = preference === 'In Person';
+            document.getElementById('phone').required = preference === 'Phone Call';
+        }
+
+        // Initialize Google Places Autocomplete
+        function initAutocomplete() {
+            const locationInput = document.getElementById('location');
+            const autocomplete = new google.maps.places.Autocomplete(locationInput);
+
+            autocomplete.setComponentRestrictions({ country: ['us'] });
+
+            autocomplete.addListener('place_changed', () => {
+                const place = autocomplete.getPlace();
+                console.log('Selected place:', place);
+            });
+        }
+
+        // Populate fields from URL query parameters
+        function populateFieldsFromURL() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const name = urlParams.get('name');
+            const email = urlParams.get('email');
+            const preference = urlParams.get('preference');
+            const location = urlParams.get('location');
+            const phone = urlParams.get('phone');
+            const time = urlParams.get('time');
+            const notes = urlParams.get('notes');
+            const company = urlParams.get('company');
+
+            if (name) document.getElementById('name').value = name;
+            if (email) document.getElementById('email').value = email;
+            if (preference) {
+                document.getElementById('preference').value = preference;
+                updateFormFields();
+            }
+            if (location) document.getElementById('location').value = location;
+            if (phone) document.getElementById('phone').value = phone;
+            if (time) document.getElementById('time').value = time;
+            if (notes) document.getElementById('notes').value = notes;
+            if (company) document.getElementById('company').value = company; // Populate hidden field
+        }
+
+        // Handle form submission with JavaScript
+        document.getElementById('meetingForm').addEventListener('submit', async function(event) {
+            event.preventDefault(); // Prevent default form submission
+
+            const form = event.target;
+            const formData = new FormData(form);
+
+            try {
+                const response = await fetch('https://formspree.io/f/mzzzkvol', {
+                    method: 'POST',
+                    body: formData,
+                    headers: { 'Accept': 'application/json' }
+                });
+
+                if (response.ok) {
+                    document.getElementById('responseMessage').style.display = 'block'; // Show success message
+                    form.style.display = 'none'; // Hide the form
+                } else {
+                    alert('Oops! There was a problem submitting your form.');
+                }
+            } catch (error) {
+                console.error('Error submitting the form:', error);
+                alert('Network error: Unable to submit form.');
+            }
+        });
+
+        // Fallback or trigger for time picker
+        function triggerPicker(element) {
+            if (element.showPicker) {
+                element.showPicker(); // Modern browser method
+            } else {
+                element.focus(); // Fallback for older browsers
+            }
+        }
+
+        // On page load
+        window.onload = () => {
+            populateFieldsFromURL();
+            initAutocomplete();
+        };
+    </script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCRD61XW2fH_m2IW2AUrmLoYiU1SjdKXB0&libraries=places&callback=initAutocomplete" async defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
